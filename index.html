@@ -7,9 +7,9 @@
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; text-align: center; padding: 15px; background: #f8f9fa; color: #333; margin: 0; }
     
-    /* 頂部 Logo 區塊 */
+    /* 頂部 Logo 區塊 (已更新寬度為 300px) */
     .header-logo { text-align: center; padding: 15px 0 5px 0; }
-    .header-logo img { max-width: 300px; height: auto; border-radius: 8px; }
+    .header-logo img { max-width: 300px; width: 100%; height: auto; border-radius: 8px; }
 
     .card { background: white; padding: 20px; margin: 10px auto; max-width: 450px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); text-align: left; }
     h2, h3 { text-align: center; margin-top: 0; }
@@ -48,7 +48,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // ⚠️ 請填入你的 Firebase Database URL
+    // ✅ 已更新你的專屬 Firebase Database URL
     const firebaseConfig = {
       databaseURL: "https://qr-order0001-default-rtdb.firebaseio.com/"
     };
