@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>餐廳極簡落單系統</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f9; }
+    .card { background: white; padding: 20px; margin: 10px auto; max-width: 400px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    button { width: 100%; padding: 15px; margin: 8px 0; font-size: 18px; border: none; border-radius: 5px; cursor: pointer; }
+    .btn-a { background: #ff7675; color: white; }
+    .btn-b { background: #74b9ff; color: white; }
+    .btn-c { background: #55efc4; color: white; }
+    .btn-h { background: #ffeaa7; color: black; }
+    .order-item { border-bottom: 1px solid #eee; padding: 10px; text-align: left; font-size: 20px; }
+    .time { font-size: 12px; color: #888; }
+  </style>
+</head>
+<body>
+
+  <div id="app">載入中...</div>
+
+  <script type="module">
+    // 引入 Google Firebase SDK (無需安裝，瀏覽器直接載入)
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // ⚠️ 請替換為你自己的 Firebase 配置 (下面有教學如何獲取)
+    const firebaseConfig = {
+      databaseURL: "https://qr-order0001-default-rtdb.firebaseio.com/"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 解析網址參數 (例如 ?table=1 或 ?kitchen=true)
+    const urlParams = new URLSearchParams(window.location.search);
+    const tableNo = urlParams.get('table');
+    const isKitchen = urlParams.get('kitchen');
+
+    const appDiv = document.getElementById('app');
+
+    // ------------------- 1. 顧客落單介面 -------------------
+    if (tableNo) {
+      appDiv.innerHTML = `
+        <h2>第 ${tableNo} 號枱 - 請選擇餐點</h2>
+        <div class="card">
+          <button class="btn-a" onclick="sendOrder('A餐')">A 餐</button>
+          <button class="btn-b" onclick="sendOrder('B餐')">B 餐</button>
+          <button class="btn-c" onclick="sendOrder('C餐')">C 餐</button>
+          <button class="btn-h" onclick="sendOrder('H餐')">H 餐</button>
+        </div>
+        <p id="status" style="color:green;"></p>
+      `;
+
+      window.sendOrder = function(meal) {
+        const ordersRef = ref(db, 'orders');
+        push(ordersRef, {
+          table: tableNo,
+          meal: meal,
+          timestamp: Date.now() // 記錄落單時間戳
+        }).then(() => {
+          document.getElementById('status').innerText = `✅ 已成功發送 ${meal} 到廚房！`;
+          setTimeout(() => document.getElementById('status').innerText = '', 3000);
+        });
+      };
+
+    // ------------------- 2. 廚房顯示介面 -------------------
+    } else if (isKitchen) {
+      appDiv.innerHTML = `
+        <h2>👨‍🍳 廚房即時出單顯示 (每 10 秒更新)</h2>
+        <p><i>超過 1 小時的訂單會自動清空隱藏</i></p>
+        <div id="orders-list" class="card">資料載入中...</div>
+      `;
+
+      function refreshKitchenView() {
+        const ordersRef = ref(db, 'orders');
+        onValue(ordersRef, (snapshot) => {
+          const data = snapshot.val();
+          const listDiv = document.getElementById('orders-list');
+          if (!data) {
+            listDiv.innerHTML = "暫時沒有訂單";
+            return;
+          }
+
+          const now = Date.now();
+          const oneHour = 60 * 60 * 1000; // 1小時毫秒數
+          let html = '';
+
+          // 轉為陣列並倒序排列 (最新的在最上)
+          const orderEntries = Object.values(data).reverse();
+
+          orderEntries.forEach(item => {
+            // 自動清理/隱藏：如果落單時間離現在超過 1 小時，就不顯示
+            if (now - item.timestamp < oneHour) {
+              const timeStr = new Date(item.timestamp).toLocaleTimeString();
+              html += `
+                <div class="order-item">
+                  <strong>【${item.table} 號枱】</strong> ➡️ <span style="color:red; font-weight:bold;">${item.meal}</span>
+                  <div class="time">落單時間: ${timeStr}</div>
+                </div>
+              `;
+            }
+          });
+
+          listDiv.innerHTML = html || "暫時沒有 1 小時之內的訂單";
+        }, { onlyOnce: true }); // 純讀取一次
+      }
+
+      // 初次載入
+      refreshKitchenView();
+
+      // 每 10 秒自動向雲端查詢最新狀態
+      setInterval(refreshKitchenView, 10000);
+
+    } else {
+      appDiv.innerHTML = `<h3>請在網址加上參數，例如：<br>?table=1 (顧客 1 號枱)<br>?kitchen=true (廚房模式)</h3>`;
+    }
+  </script>
+</body>
+</html>
